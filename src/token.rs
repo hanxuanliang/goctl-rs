@@ -75,6 +75,10 @@ pub enum APITokenKind {
     OpenParen,
     #[token(")")]
     CloseParen,
+    #[token("[")]
+    OpenBracket,
+    #[token("]")]
+    CloseBracket,
 
     // data types
     #[regex("int(8|16|32|64)?")]
@@ -93,7 +97,8 @@ pub enum APITokenKind {
     Identifier,
     #[token("struct")]
     Struct,
-    #[regex("`(?:[a-zA-Z0-9_]+:\"[a-zA-Z0-9_]+\"(?:\\s+)?)+`")]
+    // #[regex(r#"`[a-zA-Z0-9_]+:"[^"]+(?:,[^"]+)*"`"#)]
+    #[regex(r#"`(?:[a-zA-Z0-9_]+:"[^"]*"(?:\s+)?)+`"#)]
     TagAnnotation,
 
     // service modifiers
@@ -119,6 +124,8 @@ impl std::fmt::Display for APITokenKind {
             APITokenKind::CloseBrace => write!(f, "CloseBrace"),
             APITokenKind::OpenParen => write!(f, "OpenParen"),
             APITokenKind::CloseParen => write!(f, "CloseParen"),
+            APITokenKind::OpenBracket => write!(f, "OpenBracket"),
+            APITokenKind::CloseBracket => write!(f, "CloseBracket"),
             APITokenKind::IntDataType => write!(f, "IntDataType"),
             APITokenKind::FloatDataType => write!(f, "FloatDataType"),
             APITokenKind::StringDataType => write!(f, "StringDataType"),
@@ -145,8 +152,8 @@ mod tests {
     fn it_tokenizer() {
         let source = r#"
             type GetFormReq struct {
-                Name    string   `form:"name"`
-                Age     int64      `form:"age"`
+                Name    string   `form:"name,omitempty"`
+                Age     int64    `form:"age" json:"age"`
                 Hobbits []string `form:"hobbits"`
             }
             
