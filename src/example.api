@@ -1,0 +1,43 @@
+syntax = "v1"
+
+info (
+	title:   "example API"
+	desc:    "example API file"
+	author:  "hxl"
+	email:   "hxl@163.com"
+	version: "v0.1.0"
+)
+
+type GetFormReq struct {
+	Name    string   `form:"name"`
+	Age     int      `form:"age"`
+	Hobbits []string `form:"hobbits"`
+}
+
+type GetFormResp struct {
+	Total int64 `json:"total"`
+}
+
+type (
+	PostFormReq struct {
+		Name    string   `form:"name"`
+		Age     int      `form:"age"`
+		Hobbits []string `form:"hobbits"`
+	}
+	PostFormResp struct {
+		Total int64 `json:"total"`
+	}
+)
+
+@server (
+	group:   json
+	jwt:     Auth
+	timeout: 3m
+)
+service example {
+    @handler getForm
+	get /example/form (GetFormReq) returns (GetFormResp)
+
+	@handler postJson
+	post /example/json (PostJsonReq) returns (PostJsonResp)
+}

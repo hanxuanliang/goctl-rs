@@ -1,0 +1,11 @@
+[package]
+name = "goctl-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+indexmap = "2.2.2"
+logos = "0.13.0"
+nom = "7.1.3"
