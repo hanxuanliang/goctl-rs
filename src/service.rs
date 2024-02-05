@@ -87,28 +87,29 @@ fn parse_handler(i: Input) -> IResult<Handler> {
         match_token(Identifier),
         parse_http_method,
         match_token(RoutePath),
-        opt(match_token(OpenParen)),
-        opt(match_token(Identifier)),
-        opt(match_token(CloseParen)),
-        opt(match_token(RespReturns)),
-        opt(match_token(OpenParen)),
-        opt(match_token(Identifier)),
-        opt(match_token(CloseParen)),
+        delimited(
+            opt(match_token(OpenParen)),
+            opt(match_token(Identifier)),
+            opt(match_token(CloseParen)),
+        ),
+        delimited(
+            tuple((opt(match_token(RespReturns)), opt(match_token(OpenParen)))),
+            opt(match_token(Identifier)),
+            opt(match_token(CloseParen)),
+        ),
     ))(i)
-    .map(
-        |(i, (_, name, method, path, _, req_type, _, _, _, resp_type, _))| {
-            (
-                i,
-                Handler {
-                    name: name.at.to_string(),
-                    method,
-                    path: path.at.to_string(),
-                    req_type: req_type.map(|t| t.at.to_string()),
-                    resp_type: resp_type.map(|t| t.at.to_string()),
-                },
-            )
-        },
-    )
+    .map(|(i, (_, name, method, path, req_type, resp_type))| {
+        (
+            i,
+            Handler {
+                name: name.at.to_string(),
+                method,
+                path: path.at.to_string(),
+                req_type: req_type.map(|t| t.at.to_string()),
+                resp_type: resp_type.map(|t| t.at.to_string()),
+            },
+        )
+    })
 }
 
 fn parse_http_method(i: Input) -> IResult<HttpMethod> {

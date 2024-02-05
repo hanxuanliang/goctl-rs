@@ -14,8 +14,7 @@ pub struct APIStmt {
     service: Service,
 }
 
-#[allow(dead_code)]
-fn parse_api(i: Input) -> IResult<APIStmt> {
+pub fn parse_api(i: Input) -> IResult<APIStmt> {
     tuple((parse_struct_stmt, parse_service))(i).map(|(i, (type_struct, service))| {
         (
             i,
