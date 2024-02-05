@@ -34,6 +34,7 @@ impl<'a> Iterator for APITokenizer<'a> {
     }
 }
 
+#[derive(PartialEq)]
 pub struct APIToken<'a> {
     pub source: &'a str,
     pub kind: APITokenKind,
