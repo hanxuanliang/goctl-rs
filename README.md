@@ -2,15 +2,6 @@
 
 > A simple Rust version of [goctl](https://github.com/zeromicro/go-zero/tree/master/tools/goctl)
 
-## Dependencies
-
-```toml
-[dependencies]
-indexmap = "2.2.2"
-logos = "0.13.0"
-nom = "7.1.3"
-```
-
 ## Support
 
 - [x] type struct
@@ -19,6 +10,13 @@ nom = "7.1.3"
 
 - [x] nest type struct
 
+- [x] service block
+
+# Structure
+
+1. [token.rs](./src/token.rs) - Tokenize the input string
+2. [service.rs](./src/service.rs) - Parse [Service](https://go-zero.dev/docs/tutorials#service-%E8%AF%AD%E5%8F%A5) Block
+3. [struct_ref.rs](./src/struct_ref.rs) - Parse Struct Block
 
 ## API Synax
 
