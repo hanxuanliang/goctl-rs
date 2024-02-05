@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
+use std::vec;
+
 use nom::combinator::opt;
 use nom::multi::many0;
-use nom::sequence::tuple;
+use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, combinator::map};
 
 use crate::common::{match_text, match_token, IResult, Input};
@@ -31,11 +33,55 @@ enum FieldType {
     Array(Box<FieldType>),
 }
 
-fn parse_struct(i: Input) -> IResult<StructDef> {
+// parse_struct_stmt parses a struct statement.
+fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
+    alt((parse_nest_struct, parse_many_struct, parse_struct_to_vec))(i)
+}
+
+// parse_many_struct parses many struct statements.
+/// type GetFormReq struct {
+///     Name  string `form:"name,omitempty"`
+///     Age   int64  `form:"age" json:"age"`
+/// }
+/// type GetFormResp struct {
+///     Total int64 `json:"total"`
+/// }
+fn parse_many_struct(i: Input) -> IResult<Vec<StructDef>> {
+    many0(parse_one_struct)(i)
+}
+
+// parse_nest_struct parses a nested struct statement.
+/// type (
+///     GetFormReq struct {
+///         Name  string `form:"name,omitempty"`
+///         Age   int64  `form:"age" json:"age"`
+///     }
+///     GetFormResp struct {
+///         Total int64 `json:"total"`
+///     }
+/// )
+fn parse_nest_struct(i: Input) -> IResult<Vec<StructDef>> {
+    delimited(
+        tuple((match_token(Type), match_token(OpenParen))),
+        parse_many_struct,
+        match_token(CloseParen),
+    )(i)
+}
+
+fn parse_struct_to_vec(i: Input) -> IResult<Vec<StructDef>> {
+    map(parse_one_struct, |s| vec![s])(i)
+}
+
+// parse_one_struct parses a single struct statement.
+/// type GetFormReq struct {
+///     Name  string `form:"name,omitempty"`
+///     Age   int64  `form:"age" json:"age"`
+/// }
+fn parse_one_struct(i: Input) -> IResult<StructDef> {
     tuple((
-        match_token(Type),
+        opt(match_token(Type)),
         match_token(Identifier),
-        match_token(Struct),
+        opt(match_token(Struct)),
         match_token(OpenBrace),
         many0(parse_field),
         match_token(CloseBrace),
@@ -93,9 +139,12 @@ mod tests {
                 Name  string `form:"name,omitempty"`
                 Age   int64  `form:"age" json:"age"`
             }
+            type GetFormResp struct {
+                Total int64 `json:"total"`
+            }
         "#;
         let input = tokenize(source);
-        let result = parse_struct(&input);
+        let result = parse_struct_stmt(&input);
 
         let struct_def = result.unwrap().1;
         println!("{:#?}", struct_def);
