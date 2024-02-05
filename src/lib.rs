@@ -1,4 +1,7 @@
+mod common;
+mod struct_ref;
 mod token;
+mod error;
 
 #[cfg(test)]
 mod tests {

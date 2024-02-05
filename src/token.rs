@@ -34,7 +34,6 @@ impl<'a> Iterator for APITokenizer<'a> {
     }
 }
 
-#[derive(Debug)]
 pub struct APIToken<'a> {
     pub source: &'a str,
     pub kind: APITokenKind,
@@ -48,7 +47,7 @@ impl<'a> APIToken<'a> {
     }
 }
 
-impl std::fmt::Display for APIToken<'_> {
+impl std::fmt::Debug for APIToken<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -59,6 +58,10 @@ impl std::fmt::Display for APIToken<'_> {
             self.span.end
         )
     }
+}
+
+pub fn tokenize(source: &str) -> Vec<APIToken> {
+    APITokenizer::new(source).collect::<Vec<_>>()
 }
 
 #[derive(Logos, Debug, PartialEq, Clone)]
@@ -112,8 +115,10 @@ pub enum APITokenKind {
     Handler,
     #[regex("get|post")]
     HttpMethod,
-    #[regex(r#""/([a-zA-Z0-9_]+/)*[a-zA-Z0-9_]+""#)]
+    #[regex(r#"/([a-zA-Z0-9_]+/?)*"#)]
     RoutePath,
+    #[token("returns")]
+    RespReturns,
 }
 
 impl std::fmt::Display for APITokenKind {
@@ -140,6 +145,7 @@ impl std::fmt::Display for APITokenKind {
             APITokenKind::Handler => write!(f, "Handler"),
             APITokenKind::HttpMethod => write!(f, "HttpMethod"),
             APITokenKind::RoutePath => write!(f, "RoutePath"),
+            APITokenKind::RespReturns => write!(f, "RespReturns"),
         }
     }
 }
@@ -156,7 +162,6 @@ mod tests {
                 Age     int64    `form:"age" json:"age"`
                 Hobbits []string `form:"hobbits"`
             }
-            
             type GetFormResp struct {
                 Total int64 `json:"total"`
             }
@@ -169,7 +174,7 @@ mod tests {
 
         let tokenizer = APITokenizer::new(source);
         for token in tokenizer {
-            println!("{:}", token);
+            println!("{:#?}", token);
         }
     }
 }
