@@ -9,7 +9,7 @@ use nom::{branch::alt, combinator::map, sequence::tuple};
 use crate::common::{match_text_case_insensitive, match_token, IResult, Input};
 use crate::token::APITokenKind::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Service {
     name: String,
     anotation: Option<IndexMap<String, String>>,
@@ -31,7 +31,7 @@ enum HttpMethod {
     Post,
 }
 
-fn parse_service(i: Input) -> IResult<Service> {
+pub fn parse_service(i: Input) -> IResult<Service> {
     tuple((
         opt(parse_service_anotation),
         match_token(Service),

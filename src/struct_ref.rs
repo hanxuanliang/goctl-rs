@@ -34,7 +34,7 @@ enum FieldType {
 }
 
 // parse_struct_stmt parses a struct statement.
-fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
+pub fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
     alt((parse_nest_struct, parse_many_struct, parse_struct_to_vec))(i)
 }
 
