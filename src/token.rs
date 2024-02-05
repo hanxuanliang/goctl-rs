@@ -83,6 +83,8 @@ pub enum APITokenKind {
     OpenBracket,
     #[token("]")]
     CloseBracket,
+    #[token(":")]
+    Colon,
 
     // data types
     #[regex("int(8|16|32|64)?")]
@@ -97,7 +99,8 @@ pub enum APITokenKind {
     // type modifiers
     #[token("type")]
     Type,
-    #[regex(r#"[_a-zA-Z][_$a-zA-Z0-9]*"#)]
+    // #[regex(r#"[_a-zA-Z][_$a-zA-Z0-9]*"#)]
+    #[regex(r"[_a-zA-Z][_$a-zA-Z0-9]*|[0-9]+[_$a-zA-Z0-9]*")]
     Identifier,
     #[token("struct")]
     Struct,
@@ -106,12 +109,10 @@ pub enum APITokenKind {
     TagAnnotation,
 
     // service modifiers
-    #[token("service")]
-    Service,
-    #[regex("[a-zA-Z0-9_]+:\\s*[a-zA-Z0-9_]+")]
-    KVExpr,
     #[token("@server")]
     Server,
+    #[token("service")]
+    Service,
     #[token("@handler")]
     Handler,
     #[regex("get|post")]
@@ -132,6 +133,7 @@ impl std::fmt::Display for APITokenKind {
             APITokenKind::CloseParen => write!(f, "CloseParen"),
             APITokenKind::OpenBracket => write!(f, "OpenBracket"),
             APITokenKind::CloseBracket => write!(f, "CloseBracket"),
+            APITokenKind::Colon => write!(f, "Colon"),
             APITokenKind::IntDataType => write!(f, "IntDataType"),
             APITokenKind::FloatDataType => write!(f, "FloatDataType"),
             APITokenKind::StringDataType => write!(f, "StringDataType"),
@@ -140,9 +142,8 @@ impl std::fmt::Display for APITokenKind {
             APITokenKind::Identifier => write!(f, "Identifier"),
             APITokenKind::Struct => write!(f, "Struct"),
             APITokenKind::TagAnnotation => write!(f, "TagAnnotation"),
-            APITokenKind::Service => write!(f, "Service"),
-            APITokenKind::KVExpr => write!(f, "KVExpr"),
             APITokenKind::Server => write!(f, "Server"),
+            APITokenKind::Service => write!(f, "Service"),
             APITokenKind::Handler => write!(f, "Handler"),
             APITokenKind::HttpMethod => write!(f, "HttpMethod"),
             APITokenKind::RoutePath => write!(f, "RoutePath"),
@@ -167,6 +168,11 @@ mod tests {
                 Total int64 `json:"total"`
             }
 
+            @server (
+                group:   json
+	            jwt:     Auth
+	            timeout: 3m
+            )
             service UserService {
                 @handler getForm
 	            get /example/form (GetFormReq) returns (GetFormResp)

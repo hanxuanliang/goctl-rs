@@ -1,3 +1,5 @@
+pub mod parser;
+
 mod common;
 mod error;
 mod service;

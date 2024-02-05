@@ -12,7 +12,7 @@
 
 - [x] service block
 
-# Structure
+## Structure
 
 1. [token.rs](./src/token.rs) - Tokenize the input string
 2. [service.rs](./src/service.rs) - Parse [Service](https://go-zero.dev/docs/tutorials#service-%E8%AF%AD%E5%8F%A5) Block
