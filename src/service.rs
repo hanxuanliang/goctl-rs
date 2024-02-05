@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use nom::combinator::opt;
+use nom::multi::many0;
 use nom::{branch::alt, combinator::map, sequence::tuple};
 
 use crate::common::{match_text_case_insensitive, match_token, IResult, Input};
 use crate::token::APITokenKind::*;
 
+#[derive(Debug)]
 struct Service {
     name: String,
     handlers: Vec<Handler>,
@@ -24,6 +26,25 @@ struct Handler {
 enum HttpMethod {
     Get,
     Post,
+}
+
+fn parse_service(i: Input) -> IResult<Service> {
+    tuple((
+        match_token(Service),
+        match_token(Identifier),
+        match_token(OpenBrace),
+        many0(parse_handler),
+        match_token(CloseBrace),
+    ))(i)
+    .map(|(i, (_, name, _, handlers, _))| {
+        (
+            i,
+            Service {
+                name: name.at.to_string(),
+                handlers,
+            },
+        )
+    })
 }
 
 fn parse_handler(i: Input) -> IResult<Handler> {
@@ -68,6 +89,24 @@ mod tests {
     use crate::token::tokenize;
 
     use super::*;
+
+    #[test]
+    fn it_parse_service() {
+        let source = r#"
+        service example {
+            @handler getForm
+            get /example/form (GetFormReq) returns (GetFormResp)
+        
+            @handler postJson
+            post /example/json (PostJsonReq) returns (PostJsonResp)
+        }
+        "#;
+        let tokens = tokenize(source);
+        let res = parse_service(&tokens);
+
+        let service_res = res.unwrap().1;
+        println!("{:#?}", service_res);
+    }
 
     #[test]
     fn it_parse_handler() {
