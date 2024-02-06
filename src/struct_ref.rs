@@ -38,18 +38,18 @@ pub fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
     alt((parse_nest_struct, parse_many_struct))(i)
 }
 
-pub fn parse_struct_stmt1(i: Input) -> IResult<Vec<StructDef>> {
+pub fn parse_struct_stmt1(input: Input) -> IResult<Vec<StructDef>> {
     let mut structs = Vec::new(); // Collect all parsed struct definitions here
-    let mut i = i;
+    let mut i = input;
 
     while !i.is_empty() {
         // Continue parsing until all input is consumed
-        match alt((parse_nest_struct, parse_many_struct))(i) {
+        match alt((parse_nest_struct, parse_struct_to_vec))(i) {
             Ok((next_input, mut parsed_structs)) => {
                 structs.append(&mut parsed_structs); // Append parsed structs to the collection
                 i = next_input; // Update the input to the remaining unparsed part
             }
-            Err(_) => break, // If parsing fails, exit the loop
+            _ => break, // If parsing fails, exit the loop
         }
     }
 
