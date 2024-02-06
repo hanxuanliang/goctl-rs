@@ -27,8 +27,8 @@ struct Handler {
 
 #[derive(Debug)]
 enum HttpMethod {
-    Get,
-    Post,
+    GET,
+    POST,
 }
 
 pub fn parse_service(i: Input) -> IResult<Service> {
@@ -114,8 +114,8 @@ fn parse_handler(i: Input) -> IResult<Handler> {
 
 fn parse_http_method(i: Input) -> IResult<HttpMethod> {
     alt((
-        map(match_text_case_insensitive("GET"), |_| HttpMethod::Get),
-        map(match_text_case_insensitive("POST"), |_| HttpMethod::Post),
+        map(match_text_case_insensitive("GET"), |_| HttpMethod::GET),
+        map(match_text_case_insensitive("POST"), |_| HttpMethod::POST),
     ))(i)
 }
 

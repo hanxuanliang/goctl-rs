@@ -35,7 +35,25 @@ enum FieldType {
 
 // parse_struct_stmt parses a struct statement.
 pub fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
-    alt((parse_nest_struct, parse_many_struct, parse_struct_to_vec))(i)
+    alt((parse_nest_struct, parse_many_struct))(i)
+}
+
+pub fn parse_struct_stmt1(i: Input) -> IResult<Vec<StructDef>> {
+    let mut structs = Vec::new(); // Collect all parsed struct definitions here
+    let mut i = i;
+
+    while !i.is_empty() {
+        // Continue parsing until all input is consumed
+        match alt((parse_nest_struct, parse_many_struct))(i) {
+            Ok((next_input, mut parsed_structs)) => {
+                structs.append(&mut parsed_structs); // Append parsed structs to the collection
+                i = next_input; // Update the input to the remaining unparsed part
+            }
+            Err(_) => break, // If parsing fails, exit the loop
+        }
+    }
+
+    Ok((i, structs))
 }
 
 // parse_many_struct parses many struct statements.
@@ -135,16 +153,26 @@ mod tests {
     #[test]
     fn test_parse_struct() {
         let source = r#"
-            type GetFormReq struct {
-                Name  string `form:"name,omitempty"`
-                Age   int64  `form:"age" json:"age"`
+        type (
+            PostFormReq struct {
+                Name    string   `form:"name"`
+                Age     int      `form:"age"`
             }
-            type GetFormResp struct {
+            PostFormResp struct {
                 Total int64 `json:"total"`
             }
+        )
+        type GetFormReq struct {
+            Name  string `form:"name,omitempty"`
+            Age   int64  `form:"age" json:"age"`
+        }
+        type GetFormResp struct {
+            Total int64 `json:"total"`
+        }
+        
         "#;
         let input = tokenize(source);
-        let result = parse_struct_stmt(&input);
+        let result = parse_struct_stmt1(&input);
 
         let struct_def = result.unwrap().1;
         println!("{:#?}", struct_def);
