@@ -34,13 +34,15 @@ enum HttpMethod {
 pub fn parse_service(i: Input) -> IResult<Service> {
     tuple((
         opt(parse_service_anotation),
-        match_token(Service),
-        match_token(Identifier),
-        match_token(OpenBrace),
+        delimited(
+            match_token(Service),
+            match_token(Identifier),
+            match_token(OpenBrace),
+        ),
         many0(parse_handler),
         match_token(CloseBrace),
     ))(i)
-    .map(|(i, (anotation, _, name, _, handlers, _))| {
+    .map(|(i, (anotation, name, handlers, _))| {
         (
             i,
             Service {

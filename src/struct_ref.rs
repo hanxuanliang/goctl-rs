@@ -39,11 +39,10 @@ pub fn parse_struct_stmt(i: Input) -> IResult<Vec<StructDef>> {
 }
 
 pub fn parse_struct_stmt1(input: Input) -> IResult<Vec<StructDef>> {
-    let mut structs = Vec::new(); // Collect all parsed struct definitions here
+    let mut structs = Vec::new();
     let mut i = input;
 
     while !i.is_empty() {
-        // Continue parsing until all input is consumed
         match alt((parse_nest_struct, parse_struct_to_vec))(i) {
             Ok((next_input, mut parsed_structs)) => {
                 structs.append(&mut parsed_structs); // Append parsed structs to the collection
@@ -97,14 +96,16 @@ fn parse_struct_to_vec(i: Input) -> IResult<Vec<StructDef>> {
 /// }
 fn parse_one_struct(i: Input) -> IResult<StructDef> {
     tuple((
-        opt(match_token(Type)),
-        match_token(Identifier),
-        opt(match_token(Struct)),
+        delimited(
+            opt(match_token(Type)),
+            match_token(Identifier),
+            opt(match_token(Struct)),
+        ),
         match_token(OpenBrace),
         many0(parse_field),
         match_token(CloseBrace),
     ))(i)
-    .map(|(i, (_, name, _, _, fields, _))| {
+    .map(|(i, (name, _, fields, _))| {
         (
             i,
             StructDef {

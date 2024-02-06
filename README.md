@@ -12,39 +12,17 @@
 
 - [x] service block
 
+- [x] API block
+
 ## Structure
 
 1. [token.rs](./src/token.rs) - Tokenize the input string
-2. [service.rs](./src/service.rs) - Parse [Service](https://go-zero.dev/docs/tutorials#service-%E8%AF%AD%E5%8F%A5) Block
-3. [struct_ref.rs](./src/struct_ref.rs) - Parse Struct Block
+2. [parser.rs](./src/parser.rs) - Parse API Syntax
+3. [service.rs](./src/service.rs) - Parse [Service](https://go-zero.dev/docs/tutorials#service-%E8%AF%AD%E5%8F%A5) Block
+4. [struct_ref.rs](./src/struct_ref.rs) - Parse Struct Block
 
-## API Synax
+## Questions
 
-```go
-// type struct
-type GetFormReq struct {
-    Name  string `form:"name,omitempty"`
-    Age   int64  `form:"age" json:"age"`
-}
+> Problems encountered in development
 
-// many type struct
-type GetFormReq struct {
-    Name  string `form:"name,omitempty"`
-    Age   int64  `form:"age" json:"age"`
-}
-type GetFormResp struct {
-    Total int64 `json:"total"`
-}
-
-// nest type struct
-type (
-	GetFormReq struct {
-    	Name  string `form:"name,omitempty"`
-    	Age   int64  `form:"age" json:"age"`
-	}
-	GetFormResp struct {
-    	Total int64 `json:"total"`
-	}
-)
-```
-
+1. Why is parse_many_struct not used in [parse_struct_stmt1](./src/struct_ref.rs), but parse_struct_to_vec is used instead?
