@@ -6,6 +6,8 @@ mod service;
 mod struct_ref;
 mod token;
 
+mod openapi;
+
 #[cfg(test)]
 mod tests {
     #[test]

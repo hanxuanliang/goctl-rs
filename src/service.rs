@@ -13,22 +13,31 @@ use crate::token::APITokenKind::*;
 pub struct Service {
     name: String,
     anotation: Option<IndexMap<String, String>>,
-    handlers: Vec<Handler>,
+    pub handlers: Vec<Handler>,
 }
 
 #[derive(Debug)]
-struct Handler {
-    name: String,
-    method: HttpMethod,
-    path: String,
+pub struct Handler {
+    pub name: String,
+    pub method: HttpMethod,
+    pub path: String,
     req_type: Option<String>,
-    resp_type: Option<String>,
+    pub resp_type: Option<String>,
 }
 
 #[derive(Debug)]
-enum HttpMethod {
+pub enum HttpMethod {
     GET,
     POST,
+}
+
+impl std::fmt::Display for HttpMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HttpMethod::GET => write!(f, "GET"),
+            HttpMethod::POST => write!(f, "POST"),
+        }
+    }
 }
 
 pub fn parse_service(i: Input) -> IResult<Service> {

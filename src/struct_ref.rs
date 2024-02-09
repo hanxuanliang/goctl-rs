@@ -6,25 +6,26 @@ use nom::combinator::opt;
 use nom::multi::many0;
 use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, combinator::map};
+use serde::{Deserialize, Serialize};
 
 use crate::common::{match_text, match_token, IResult, Input};
 use crate::token::APITokenKind::*;
 
 #[derive(Debug)]
 pub struct StructDef {
-    name: String,
-    fields: Vec<Field>,
+    pub name: String,
+    pub fields: Vec<Field>,
 }
 
 #[derive(Debug)]
-struct Field {
-    name: String,
-    field_type: FieldType,
+pub struct Field {
+    pub name: String,
+    pub field_type: FieldType,
     tag: Option<String>,
 }
 
-#[derive(Debug, PartialEq)]
-enum FieldType {
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub enum FieldType {
     Int,
     Int32,
     Int64,

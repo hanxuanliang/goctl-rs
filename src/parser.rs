@@ -10,8 +10,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct APIStmt {
-    type_struct: Vec<StructDef>,
-    service: Service,
+    pub type_struct: Vec<StructDef>,
+    pub service: Service,
 }
 
 pub fn parse_api(i: Input) -> IResult<APIStmt> {
