@@ -55,12 +55,12 @@ impl Swagger {
         })
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         serde_json::to_string_pretty(&self.to_json()).unwrap()
     }
 }
 
-fn to_swagger(api_data: APIStmt) -> Swagger {
+pub fn to_swagger(api_data: APIStmt) -> Swagger {
     let mut swagger = Swagger::new();
 
     for struct_def in api_data.type_struct {

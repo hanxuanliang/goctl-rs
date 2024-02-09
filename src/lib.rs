@@ -1,4 +1,5 @@
 pub mod parser;
+pub mod cli;
 
 mod common;
 mod error;

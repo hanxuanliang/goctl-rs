@@ -1,13 +1,3 @@
-syntax = "v1"
-
-info (
-	title:   "example API"
-	desc:    "example API file"
-	author:  "hxl"
-	email:   "hxl@163.com"
-	version: "v0.1.0"
-)
-
 type GetFormReq struct {
 	Name    string   `form:"name"`
 	Age     int      `form:"age"`
@@ -39,5 +29,5 @@ service example {
 	get /example/form (GetFormReq) returns (GetFormResp)
 
 	@handler postJson
-	post /example/json (PostJsonReq) returns (PostJsonResp)
+	post /example/json (PostFormReq) returns (PostFormResp)
 }

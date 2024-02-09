@@ -1,1 +1,3 @@
 /target
+.Ds_Store
+tests/gen*
