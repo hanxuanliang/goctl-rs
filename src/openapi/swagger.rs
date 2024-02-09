@@ -82,11 +82,17 @@ fn to_swagger(api_data: APIStmt) -> Swagger {
         let operation = json!({
             "summary": handler.name,
             "responses": {
-                "200": {
-                    "description": "OK",
-                    "schema": {
-                        "$ref": format!("#/definitions/{:?}", handler.resp_type),
-                    },
+                "200": match &handler.resp_type {
+                    Some(resp_type) => {
+                        json!({
+                            "application/json": {
+                                "schema": {
+                                    "$ref": format!("#/definitions/{:?}", resp_type),
+                                },
+                            },
+                        })
+                    }
+                    None => json!({"description": "OK"}),
                 },
             },
         });

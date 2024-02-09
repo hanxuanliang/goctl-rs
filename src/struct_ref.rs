@@ -32,6 +32,7 @@ pub enum FieldType {
     String,
     Bool,
     Array(Box<FieldType>),
+    Map(Box<FieldType>, Box<FieldType>),
 }
 
 // parse_struct_stmt parses a struct statement.
@@ -91,10 +92,6 @@ fn parse_struct_to_vec(i: Input) -> IResult<Vec<StructDef>> {
 }
 
 // parse_one_struct parses a single struct statement.
-/// type GetFormReq struct {
-///     Name  string `form:"name,omitempty"`
-///     Age   int64  `form:"age" json:"age"`
-/// }
 fn parse_one_struct(i: Input) -> IResult<StructDef> {
     tuple((
         delimited(
@@ -138,12 +135,37 @@ fn parse_field(i: Input) -> IResult<Field> {
 // parse_field_type parses a field type.
 fn parse_field_type(i: Input) -> IResult<FieldType> {
     alt((
+        parse_array_type,
+        parse_map_type,
         map(match_text("string"), |_| FieldType::String),
         map(match_text("int"), |_| FieldType::Int),
         map(match_text("int32"), |_| FieldType::Int32),
         map(match_text("int64"), |_| FieldType::Int64),
         map(match_text("bool"), |_| FieldType::Bool),
     ))(i)
+}
+
+fn parse_array_type(i: Input) -> IResult<FieldType> {
+    tuple((
+        match_token(OpenBracket),
+        match_token(CloseBracket),
+        parse_field_type,
+    ))(i)
+    .map(|(i, (_, _, data_type))| (i, FieldType::Array(Box::new(data_type))))
+}
+
+// parse_map_type parses a map type: map[keyType]valueType.
+fn parse_map_type(i: Input) -> IResult<FieldType> {
+    tuple((
+        match_token(MapDataType),
+        match_token(OpenBracket),
+        parse_field_type,
+        match_token(CloseBracket),
+        parse_field_type,
+    ))(i)
+    .map(|(i, (_, _, key_type, _, value_type))| {
+        (i, FieldType::Map(Box::new(key_type), Box::new(value_type)))
+    })
 }
 
 #[cfg(test)]
@@ -199,5 +221,25 @@ mod tests {
 
         let field_type = result.unwrap().1;
         assert_eq!(field_type, FieldType::String);
+    }
+
+    #[test]
+    fn test_parse_field_type_array() {
+        let source = "[]int";
+        let input = tokenize(source);
+        let result = parse_array_type(&input);
+
+        let field_type = result.unwrap().1;
+        println!("{:#?}", field_type);
+    }
+
+    #[test]
+    fn test_parse_field_type_map() {
+        let source = "map[string]map[string][]int";
+        let input = tokenize(source);
+        let result = parse_map_type(&input);
+
+        let field_type = result.unwrap().1;
+        println!("{:#?}", field_type);
     }
 }

@@ -95,6 +95,8 @@ pub enum APITokenKind {
     StringDataType,
     #[regex("bool")]
     BoolDataType,
+    #[token("map")]
+    MapDataType,
 
     // type modifiers
     #[token("type")]
@@ -138,6 +140,7 @@ impl std::fmt::Display for APITokenKind {
             APITokenKind::FloatDataType => write!(f, "FloatDataType"),
             APITokenKind::StringDataType => write!(f, "StringDataType"),
             APITokenKind::BoolDataType => write!(f, "BoolDataType"),
+            APITokenKind::MapDataType => write!(f, "MapDataType"),
             APITokenKind::Type => write!(f, "Type"),
             APITokenKind::Identifier => write!(f, "Identifier"),
             APITokenKind::Struct => write!(f, "Struct"),

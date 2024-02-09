@@ -32,6 +32,7 @@ mod tests {
     use crate::token::tokenize;
 
     #[test]
+    // cargo test --package goctl-rs --lib -- parser::tests::test_parse_api --exact --nocapture
     fn test_parse_api() {
         let source = r#"
         type (
