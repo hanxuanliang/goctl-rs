@@ -6,7 +6,9 @@ use nom::combinator::opt;
 use nom::multi::many0;
 use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, combinator::map};
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::common::{match_text, match_token, IResult, Input};
 use crate::token::APITokenKind::*;
@@ -24,7 +26,7 @@ pub struct Field {
     tag: Option<String>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub enum FieldType {
     Int,
     Int32,
@@ -33,6 +35,60 @@ pub enum FieldType {
     Bool,
     Array(Box<FieldType>),
     Map(Box<FieldType>, Box<FieldType>),
+}
+
+impl Serialize for FieldType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match *self {
+            FieldType::Int => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("type", "integer")?;
+                state.serialize_field("format", "int")?;
+                state.end()
+            }
+            FieldType::Int32 => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("type", "integer")?;
+                state.serialize_field("format", "int32")?;
+                state.end()
+            }
+            FieldType::Int64 => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("type", "integer")?;
+                state.serialize_field("format", "int64")?;
+                state.end()
+            }
+            FieldType::String => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("type", "string")?;
+                state.end()
+            }
+            FieldType::Bool => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("type", "boolean")?;
+                state.end()
+            }
+            FieldType::Array(ref ele_type) => {
+                let items = serde_json::to_value(ele_type).unwrap_or(json!({}));
+                let mut state = serializer.serialize_struct("FieldType", 2)?;
+                state.serialize_field("type", "array")?;
+                state.serialize_field("items", &items)?;
+                state.end()
+            }
+            FieldType::Map(ref _key_type, ref value_type) => {
+                let mut state = serializer.serialize_struct("FieldType", 2)?;
+                state.serialize_field("type", "object")?;
+                state.serialize_field(
+                    "additionalProperties",
+                    &serde_json::to_value(value_type).unwrap_or(json!({})),
+                )?;
+                state.end()
+            }
+        }
+    }
 }
 
 // parse_struct_stmt parses a struct statement.
@@ -187,7 +243,7 @@ mod tests {
             }
         )
         type GetFormReq struct {
-            Name  string `form:"name,omitempty"`
+            Name  []string `form:"name,omitempty"`
             Age   int64  `form:"age" json:"age"`
         }
         type GetFormResp struct {
@@ -241,5 +297,43 @@ mod tests {
 
         let field_type = result.unwrap().1;
         println!("{:#?}", field_type);
+    }
+
+    #[test]
+    fn test_serialize_field_type() {
+        let cases: Vec<(&str, FieldType, &str)> = vec![
+            (
+                "test1",
+                FieldType::Int,
+                r#"{"type":"integer","format":"int"}"#,
+            ),
+            (
+                "test2",
+                FieldType::Int32,
+                r#"{"type":"integer","format":"int32"}"#,
+            ),
+            (
+                "test3",
+                FieldType::Int64,
+                r#"{"type":"integer","format":"int64"}"#,
+            ),
+            ("test4", FieldType::String, r#"{"type":"string"}"#),
+            ("test5", FieldType::Bool, r#"{"type":"boolean"}"#),
+            (
+                "test6",
+                FieldType::Array(Box::new(FieldType::Int)),
+                r#"{"type":"array","items":{"format":"int","type":"integer"}}"#,
+            ),
+            (
+                "test7",
+                FieldType::Map(Box::new(FieldType::String), Box::new(FieldType::Int)),
+                r#"{"type":"object","additionalProperties":{"format":"int","type":"integer"}}"#,
+            ),
+        ];
+
+        for (case_name, field_type, expected) in cases {
+            let actual = serde_json::to_string(&field_type).unwrap();
+            assert_eq!(actual, expected, "{}", case_name);
+        }
     }
 }

@@ -34,8 +34,8 @@ pub enum HttpMethod {
 impl std::fmt::Display for HttpMethod {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            HttpMethod::GET => write!(f, "GET"),
-            HttpMethod::POST => write!(f, "POST"),
+            HttpMethod::GET => write!(f, "get"),
+            HttpMethod::POST => write!(f, "post"),
         }
     }
 }

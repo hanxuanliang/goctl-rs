@@ -1,13 +1,21 @@
 #![allow(dead_code)]
 
+use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::parser::APIStmt;
+use crate::{parser::APIStmt, struct_ref::FieldType};
 
 #[derive(Default)]
 pub struct Swagger {
     paths: Value,
     definitions: Value,
+}
+
+#[derive(Serialize)]
+struct SwaggerField {
+    #[serde(flatten)]
+    field_type: FieldType,
+    description: String,
 }
 
 impl Swagger {
@@ -35,13 +43,15 @@ impl Swagger {
 
     fn to_json(&self) -> Value {
         json!({
-            "swagger": "2.0",
+            "openapi": "3.0.3",
             "info": {
                 "version": "1.0.0",
                 "title": "Generated Swagger API"
             },
             "paths": self.paths,
-            "definitions": self.definitions,
+            "components": {
+                "schemas": self.definitions,
+            },
         })
     }
 
@@ -60,11 +70,12 @@ fn to_swagger(api_data: APIStmt) -> Swagger {
             .iter()
             .map(|field| {
                 (
-                    field.name.clone(),
-                    json!({
-                        "type": field.field_type,
-                        "description": field.name,
-                    }),
+                    field.name.to_lowercase(),
+                    serde_json::to_value(&SwaggerField {
+                        field_type: field.field_type.clone(),
+                        description: field.name.to_string(),
+                    })
+                    .unwrap_or(json!({})),
                 )
             })
             .collect::<serde_json::Map<_, _>>();
@@ -85,9 +96,12 @@ fn to_swagger(api_data: APIStmt) -> Swagger {
                 "200": match &handler.resp_type {
                     Some(resp_type) => {
                         json!({
-                            "application/json": {
-                                "schema": {
-                                    "$ref": format!("#/definitions/{:?}", resp_type),
+                            "description": "successful operation",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": format!("#/components/schemas/{}", resp_type),
+                                    },
                                 },
                             },
                         })
@@ -117,10 +131,11 @@ mod tests {
         type (
             PostFormReq struct {
                 Name    string   `form:"name"`
-                Age     int      `form:"age"`
+                Age     []int      `form:"age"`
             }
             PostFormResp struct {
                 Total int64 `json:"total"`
+                State []string `json:"state"`
             }
         )
         type GetFormReq struct {
@@ -129,6 +144,7 @@ mod tests {
         }
         type GetFormResp struct {
             Total int64 `json:"total"`
+            Times []int32 `json:"times"`
         }
 
         @server (
