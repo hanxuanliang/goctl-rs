@@ -52,6 +52,8 @@ fn oli() {
                 let api_path = canonicalize_path(PathBuf::from(input_api));
                 let output_dir = canonicalize_path(PathBuf::from(output_dir));
 
+                fs::create_dir_all(&output_dir).expect("Failed to create output directory");
+
                 let source = fs::read_to_string(&api_path).unwrap_or_else(|e| {
                     eprintln!("Error reading file '{}': {}", api_path.to_str().unwrap(), e);
                     std::process::exit(1);
@@ -65,7 +67,7 @@ fn oli() {
                 let mut output_file =
                     File::create(output_dir).expect("Failed to create output file");
                 writeln!(output_file, "{}", swagger_json.to_string())
-                    .expect("Failed to write Swagger JSON");
+                    .expect("Failed to write Generate Swagger JSON");
             }
         },
     }

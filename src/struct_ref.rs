@@ -2,7 +2,7 @@
 
 use std::vec;
 
-use nom::combinator::opt;
+use nom::combinator::{opt, peek};
 use nom::multi::many0;
 use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, combinator::map};
@@ -35,6 +35,7 @@ pub enum FieldType {
     Bool,
     Array(Box<FieldType>),
     Map(Box<FieldType>, Box<FieldType>),
+    StructRef { name: String, is_embed: bool },
 }
 
 impl Serialize for FieldType {
@@ -85,6 +86,11 @@ impl Serialize for FieldType {
                     "additionalProperties",
                     &serde_json::to_value(value_type).unwrap_or(json!({})),
                 )?;
+                state.end()
+            }
+            FieldType::StructRef { ref name, .. } => {
+                let mut state = serializer.serialize_struct("FieldType", 1)?;
+                state.serialize_field("$ref", &format!("#/components/schemas/{}", name))?;
                 state.end()
             }
         }
@@ -173,7 +179,16 @@ fn parse_one_struct(i: Input) -> IResult<StructDef> {
 fn parse_field(i: Input) -> IResult<Field> {
     tuple((
         match_token(Identifier),
-        parse_field_type,
+        alt((
+            parse_field_type,
+            map(peek(match_token(Identifier)), |name| {
+                println!("name: {:?}", name);
+                FieldType::StructRef {
+                    name: name.at.to_string(),
+                    is_embed: true,
+                }
+            }),
+        )),
         opt(match_token(TagAnnotation)),
     ))(i)
     .map(|(i, (name, data_type, tag_token))| {
@@ -188,7 +203,7 @@ fn parse_field(i: Input) -> IResult<Field> {
     })
 }
 
-// parse_field_type parses a field type.
+// parse_field_type parses a basic field type.
 fn parse_field_type(i: Input) -> IResult<FieldType> {
     alt((
         parse_array_type,
@@ -246,8 +261,13 @@ mod tests {
             Name  []string `form:"name,omitempty"`
             Age   int64  `form:"age" json:"age"`
         }
+        type Status struct {
+            Code int `json:"code"`
+            Msg  string `json:"msg"`
+        }
         type GetFormResp struct {
             Total int64 `json:"total"`
+            Status
         }
         
         "#;
@@ -271,29 +291,36 @@ mod tests {
 
     #[test]
     fn test_parse_field_type() {
-        let source = "string";
-        let input = tokenize(source);
-        let result = parse_field_type(&input);
+        let source = vec![
+            ("test1", "int", FieldType::Int),
+            ("test2", "int32", FieldType::Int32),
+            ("test3", "int64", FieldType::Int64),
+            ("test4", "string", FieldType::String),
+            ("test5", "bool", FieldType::Bool),
+            ("test6", "[]int", FieldType::Array(Box::new(FieldType::Int))),
+            (
+                "test7",
+                "map[string]int",
+                FieldType::Map(Box::new(FieldType::String), Box::new(FieldType::Int)),
+            ),
+        ];
 
-        let field_type = result.unwrap().1;
-        assert_eq!(field_type, FieldType::String);
+        for (case_name, source, expected) in source {
+            let input = tokenize(source);
+            let result = parse_field_type(&input);
+
+            let field_type = result.unwrap().1;
+            assert_eq!(field_type, expected, "{}", case_name);
+        }
     }
 
     #[test]
-    fn test_parse_field_type_array() {
-        let source = "[]int";
+    fn test_parse_struct_ref() {
+        let source = r#"
+        Status
+        "#;
         let input = tokenize(source);
-        let result = parse_array_type(&input);
-
-        let field_type = result.unwrap().1;
-        println!("{:#?}", field_type);
-    }
-
-    #[test]
-    fn test_parse_field_type_map() {
-        let source = "map[string]map[string][]int";
-        let input = tokenize(source);
-        let result = parse_map_type(&input);
+        let result = parse_field(&input);
 
         let field_type = result.unwrap().1;
         println!("{:#?}", field_type);
@@ -301,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_serialize_field_type() {
-        let cases: Vec<(&str, FieldType, &str)> = vec![
+        let cases = vec![
             (
                 "test1",
                 FieldType::Int,

@@ -48,8 +48,13 @@ mod tests {
             Name  string `form:"name,omitempty"`
             Age   int64  `form:"age" json:"age"`
         }
+        type Status struct {
+            Code int `json:"code"`
+            Msg  string `json:"msg"`
+        }
         type GetFormResp struct {
             Total int64 `json:"total"`
+            Status
         }
 
         @server (
