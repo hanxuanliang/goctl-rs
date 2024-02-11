@@ -4,11 +4,12 @@ use std::fs;
 use std::io::Write;
 use std::{fs::File, path::PathBuf};
 
+use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::{openapi::swagger::to_swagger, parser::parse_api, token::tokenize};
-
 use super::canonicalize_path;
+use super::error::TransformError;
+use crate::{openapi::swagger::to_swagger, parser::parse_api, token::tokenize};
 
 // goctl oai swagger --api <api file> -dir <output dir>
 #[derive(Parser)]
@@ -41,36 +42,46 @@ enum OaiCommand {
     },
 }
 
-fn oli() {
+fn run_oli() -> Result<(), TransformError> {
     let goctl = Goctl::parse();
+
     match goctl.command {
-        Command::Oai { command } => match command {
-            OaiCommand::Swagger {
-                input_api,
-                output_dir,
-            } => {
-                let api_path = canonicalize_path(PathBuf::from(input_api));
-                let output_dir = canonicalize_path(PathBuf::from(output_dir));
-
-                fs::create_dir_all(&output_dir).expect("Failed to create output directory");
-
-                let source = fs::read_to_string(&api_path).unwrap_or_else(|e| {
-                    eprintln!("Error reading file '{}': {}", api_path.to_str().unwrap(), e);
-                    std::process::exit(1);
-                });
-
-                let input = tokenize(&source);
-                let result = parse_api(&input);
-
-                let api_data = result.unwrap().1;
-                let swagger_json = to_swagger(api_data);
-                let mut output_file =
-                    File::create(output_dir).expect("Failed to create output file");
-                writeln!(output_file, "{}", swagger_json.to_string())
-                    .expect("Failed to write Generate Swagger JSON");
-            }
-        },
+        Command::Oai {
+            command:
+                OaiCommand::Swagger {
+                    input_api,
+                    output_dir,
+                },
+        } => {
+            convert_to_swagger(&PathBuf::from(&input_api), &PathBuf::from(&output_dir))?;
+            Ok(())
+        }
     }
+}
+
+fn convert_to_swagger(input_api: &PathBuf, output_dir: &PathBuf) -> Result<String, TransformError> {
+    let (api_path, output_dir) = (
+        canonicalize_path(PathBuf::from(input_api)),
+        canonicalize_path(PathBuf::from(output_dir)),
+    );
+
+    fs::create_dir_all(&output_dir).map_err(|_| TransformError::OutDirError(output_dir.clone()))?;
+
+    let source = fs::read_to_string(&api_path).unwrap_or_else(|e| {
+        eprintln!("Error reading file '{}': {}", api_path.to_str().unwrap(), e);
+        std::process::exit(1);
+    });
+    let (_, api_data) =
+        parse_api(&(tokenize(&source))).map_err(|e| TransformError::ParseError(e.to_string()))?;
+
+    let swagger_json = to_swagger(api_data);
+
+    // Write to file
+    let output_path = PathBuf::from(&output_dir).join("gen_swagger.json");
+    let mut output_file = File::create(&output_path)?;
+    writeln!(output_file, "{}", swagger_json.to_string())?;
+
+    Ok(swagger_json.to_string())
 }
 
 #[cfg(test)]
@@ -96,23 +107,8 @@ mod tests {
                     input_api,
                     output_dir,
                 } => {
-                    let api_path = canonicalize_path(PathBuf::from(input_api));
-                    let output_dir = canonicalize_path(PathBuf::from(output_dir));
-
-                    let source = fs::read_to_string(&api_path).unwrap_or_else(|e| {
-                        eprintln!("Error reading file '{}': {}", api_path.to_str().unwrap(), e);
-                        std::process::exit(1);
-                    });
-
-                    let input = tokenize(&source);
-                    let result = parse_api(&input);
-
-                    let api_data = result.unwrap().1;
-                    let swagger_json = to_swagger(api_data);
-                    let mut output_file = File::create(output_dir.join("gen_swagger.json"))
-                        .expect("Failed to create output file");
-                    writeln!(output_file, "{}", swagger_json.to_string())
-                        .expect("Failed to write Swagger JSON");
+                    convert_to_swagger(&PathBuf::from(&input_api), &PathBuf::from(&output_dir))
+                        .expect("Failed to convert to swagger");
                 }
             },
         }

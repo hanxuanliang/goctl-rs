@@ -301,6 +301,28 @@ mod tests {
                 "map[string]int",
                 FieldType::Map(Box::new(FieldType::String), Box::new(FieldType::Int)),
             ),
+            (
+                "test8",
+                "map[string]map[string]int",
+                FieldType::Map(
+                    Box::new(FieldType::String),
+                    Box::new(FieldType::Map(
+                        Box::new(FieldType::String),
+                        Box::new(FieldType::Int),
+                    )),
+                ),
+            ),
+            (
+                "test9",
+                "map[string]Status",
+                FieldType::Map(
+                    Box::new(FieldType::String),
+                    Box::new(FieldType::StructRef {
+                        name: "Status".to_string(),
+                        is_embed: false,
+                    }),
+                ),
+            ),
         ];
 
         for (case_name, source, expected) in source {
