@@ -2,7 +2,7 @@
 
 use std::vec;
 
-use nom::combinator::{opt, peek};
+use nom::combinator::{opt, success};
 use nom::multi::many0;
 use nom::sequence::{delimited, tuple};
 use nom::{branch::alt, combinator::map};
@@ -120,13 +120,6 @@ pub fn parse_struct_stmt1(input: Input) -> IResult<Vec<StructDef>> {
 }
 
 // parse_many_struct parses many struct statements.
-/// type GetFormReq struct {
-///     Name  string `form:"name,omitempty"`
-///     Age   int64  `form:"age" json:"age"`
-/// }
-/// type GetFormResp struct {
-///     Total int64 `json:"total"`
-/// }
 fn parse_many_struct(i: Input) -> IResult<Vec<StructDef>> {
     many0(parse_one_struct)(i)
 }
@@ -177,25 +170,22 @@ fn parse_one_struct(i: Input) -> IResult<StructDef> {
 }
 
 fn parse_field(i: Input) -> IResult<Field> {
+    let (i, name_token) = match_token(Identifier)(i)?; // 解析字段名
     tuple((
-        match_token(Identifier),
         alt((
-            parse_field_type,
-            map(peek(match_token(Identifier)), |name| {
-                println!("name: {:?}", name);
-                FieldType::StructRef {
-                    name: name.at.to_string(),
-                    is_embed: true,
-                }
+            parse_basic_field_type,
+            success(FieldType::StructRef {
+                name: name_token.at.to_string(),
+                is_embed: true,
             }),
         )),
         opt(match_token(TagAnnotation)),
     ))(i)
-    .map(|(i, (name, data_type, tag_token))| {
+    .map(|(i, (data_type, tag_token))| {
         (
             i,
             Field {
-                name: name.at.to_string(),
+                name: name_token.at.to_string(),
                 field_type: data_type,
                 tag: tag_token.map(|t| t.at.to_string()),
             },
@@ -204,15 +194,16 @@ fn parse_field(i: Input) -> IResult<Field> {
 }
 
 // parse_field_type parses a basic field type.
-fn parse_field_type(i: Input) -> IResult<FieldType> {
+fn parse_basic_field_type(i: Input) -> IResult<FieldType> {
     alt((
-        parse_array_type,
-        parse_map_type,
         map(match_text("string"), |_| FieldType::String),
         map(match_text("int"), |_| FieldType::Int),
         map(match_text("int32"), |_| FieldType::Int32),
         map(match_text("int64"), |_| FieldType::Int64),
         map(match_text("bool"), |_| FieldType::Bool),
+        parse_array_type,
+        parse_map_type,
+        parse_struct_ref,
     ))(i)
 }
 
@@ -220,7 +211,7 @@ fn parse_array_type(i: Input) -> IResult<FieldType> {
     tuple((
         match_token(OpenBracket),
         match_token(CloseBracket),
-        parse_field_type,
+        parse_basic_field_type,
     ))(i)
     .map(|(i, (_, _, data_type))| (i, FieldType::Array(Box::new(data_type))))
 }
@@ -230,13 +221,20 @@ fn parse_map_type(i: Input) -> IResult<FieldType> {
     tuple((
         match_token(MapDataType),
         match_token(OpenBracket),
-        parse_field_type,
+        parse_basic_field_type,
         match_token(CloseBracket),
-        parse_field_type,
+        parse_basic_field_type,
     ))(i)
     .map(|(i, (_, _, key_type, _, value_type))| {
         (i, FieldType::Map(Box::new(key_type), Box::new(value_type)))
     })
+}
+
+fn parse_struct_ref(i: Input) -> IResult<FieldType> {
+    map(match_token(Identifier), |name| FieldType::StructRef {
+        name: name.at.to_string(),
+        is_embed: false,
+    })(i)
 }
 
 #[cfg(test)]
@@ -290,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_field_type() {
+    fn test_parse_basic_field_type() {
         let source = vec![
             ("test1", "int", FieldType::Int),
             ("test2", "int32", FieldType::Int32),
@@ -307,7 +305,7 @@ mod tests {
 
         for (case_name, source, expected) in source {
             let input = tokenize(source);
-            let result = parse_field_type(&input);
+            let result = parse_basic_field_type(&input);
 
             let field_type = result.unwrap().1;
             assert_eq!(field_type, expected, "{}", case_name);
